@@ -1,14 +1,14 @@
 use crate::cron_exp::{CronExp, NumberOrAny};
 
 #[derive(Debug, PartialEq)]
-struct CronBit {
+struct CronSlot {
   exp: CronExp,
   bound: (u8, u8),
 }
 
-impl CronBit {
+impl CronSlot {
   fn new(text: &str, min: u8, max: u8) -> Self {
-    CronBit {
+    CronSlot {
       exp: CronExp::from(text),
       bound: (min, max),
     }
@@ -56,24 +56,24 @@ fn numvec_to_str(vec: &[u8]) -> String {
 
 impl Cron {
   pub fn new(line: &str) -> Option<Self> {
-    let mut bits = line.split(" ");
+    let mut slots = line.split(" ");
 
-    let bits: Option<Vec<&str>> = [
-      bits.next(),
-      bits.next(),
-      bits.next(),
-      bits.next(),
-      bits.next(),
-      bits.next(),
+    let slots: Option<Vec<&str>> = [
+      slots.next(),
+      slots.next(),
+      slots.next(),
+      slots.next(),
+      slots.next(),
+      slots.next(),
     ]
     .iter()
     .copied()
     .collect();
 
-    // exit with None if length of bits are smaller than 6
-    let mut bits = bits?;
+    // exit with None if length of slots are smaller than 6
+    let mut slots = slots?;
 
-    let command = bits.pop()?;
+    let command = slots.pop()?;
 
     let bounds: [(u8, u8); 5] = [
       (0, 59), // minute
@@ -83,18 +83,18 @@ impl Cron {
       (0, 6),  // day of week
     ];
 
-    let mut bits = bits
+    let mut slots = slots
       .iter()
       .zip(bounds.iter())
-      .map(|(text, &(s, e))| CronBit::new(text, s, e))
+      .map(|(text, &(s, e))| CronSlot::new(text, s, e))
       .map(|c| c.vectorize());
 
     Some(Cron {
-      minutes: bits.next().unwrap(),
-      hours: bits.next().unwrap(),
-      days_of_month: bits.next().unwrap(),
-      months: bits.next().unwrap(),
-      days_of_week: bits.next().unwrap(),
+      minutes: slots.next().unwrap(),
+      hours: slots.next().unwrap(),
+      days_of_month: slots.next().unwrap(),
+      months: slots.next().unwrap(),
+      days_of_week: slots.next().unwrap(),
       command: command.into(),
     })
   }
@@ -118,11 +118,11 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_cronbit_new() {
+  fn test_cronslot_new() {
     // minute
     assert_eq!(
-      CronBit::new("*/15", 0, 59),
-      CronBit {
+      CronSlot::new("*/15", 0, 59),
+      CronSlot {
         exp: CronExp::Step(NumberOrAny::Any, 15),
         bound: (0, 59),
       }
@@ -130,8 +130,8 @@ mod tests {
 
     // hour
     assert_eq!(
-      CronBit::new("0", 0, 23),
-      CronBit {
+      CronSlot::new("0", 0, 23),
+      CronSlot {
         exp: CronExp::List(vec![0]),
         bound: (0, 23),
       }
@@ -139,8 +139,8 @@ mod tests {
 
     // day of month
     assert_eq!(
-      CronBit::new("1,15", 1, 31),
-      CronBit {
+      CronSlot::new("1,15", 1, 31),
+      CronSlot {
         exp: CronExp::List(vec![1, 15]),
         bound: (1, 31),
       }
@@ -148,8 +148,8 @@ mod tests {
 
     // month
     assert_eq!(
-      CronBit::new("*", 1, 12),
-      CronBit {
+      CronSlot::new("*", 1, 12),
+      CronSlot {
         exp: CronExp::All,
         bound: (1, 12),
       }
@@ -157,8 +157,8 @@ mod tests {
 
     // day of week
     assert_eq!(
-      CronBit::new("1-5", 0, 6),
-      CronBit {
+      CronSlot::new("1-5", 0, 6),
+      CronSlot {
         exp: CronExp::Range(1, 5),
         bound: (0, 6),
       }
